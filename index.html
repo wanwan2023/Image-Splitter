@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>图像分割器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            font-size: 2.5em;
+            font-weight: 600;
+        }
+
+        .upload-area {
+            width: 100%;
+            min-height: 500px;
+            max-height: 800px;
+            margin: 0 auto 30px;
+            border: 3px dashed #e0e0e0;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #2196F3;
+            background: #f5f5f5;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-button {
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-button:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        .preview-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #preview {
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #preview img {
+            max-width: 100%;
+            max-height: 700px;
+            object-fit: contain;
+        }
+
+        .split-options {
+            width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .split-type {
+            margin-bottom: 25px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            border-color: #2196F3;
+            outline: none;
+        }
+
+        .dimensions {
+            display: none;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .dimensions.show {
+            display: flex;
+        }
+
+        .dimensions div {
+            flex: 1;
+        }
+
+        .dimensions label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .dimensions input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .btn-split {
+            width: 100%;
+            padding: 15px;
+            background: #00c853;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-split:hover {
+            background: #00a844;
+            transform: translateY(-2px);
+        }
+
+        .split-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .split-line {
+            position: absolute;
+            background: rgba(33, 150, 243, 0.8);
+            pointer-events: auto;
+            z-index: 1000;
+        }
+
+        .split-line.vertical {
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+        }
+
+        .split-line.horizontal {
+            height: 4px;
+            width: 100%;
+            cursor: row-resize;
+        }
+
+        .split-line:hover {
+            background: rgba(33, 150, 243, 1);
+        }
+
+        .split-preview {
+            width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .split-preview h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 1.5em;
+        }
+
+        .preview-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            margin-top: 20px;
+        }
+
+        .preview-grid img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .preview-item {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%;
+            overflow: hidden;
+        }
+
+        .preview-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal img {
+            max-width: 90%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
+
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+
+        .preview-grid img {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .preview-grid img:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">图像分割工具</h1>
+        <div class="upload-area" id="dropZone">
+            <input type="file" id="imageUpload" accept="image/*">
+            <button class="upload-button" onclick="document.getElementById('imageUpload').click()">
+                选择图片
+            </button>
+            <div id="preview"></div>
+            <div id="splitLines" class="split-lines"></div>
+        </div>
+        
+        <div class="split-options">
+            <div class="split-type">
+                <select id="splitType" onchange="toggleDimensions()">
+                    <option value="vertical">垂直分割 (1 × 2)</option>
+                    <option value="horizontal">水平分割 (2 × 1)</option>
+                    <option value="pieces">自定义分割</option>
+                </select>
+            </div>
+            
+            <div class="dimensions" id="dimensionsControl">
+                <div>
+                    <label>行数</label>
+                    <input type="number" id="rows" value="3" min="1">
+                </div>
+                <div>
+                    <label>列数</label>
+                    <input type="number" id="cols" value="3" min="1">
+                </div>
+            </div>
+            
+            <button class="btn-split" onclick="splitImage()">开始分割</button>
+        </div>
+
+        <div class="split-preview" id="splitPreview">
+            <h2>分割预览</h2>
+            <div class="preview-grid" id="previewGrid"></div>
+            <button class="download-btn" onclick="downloadImages()">下载所有图片</button>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img id="modalImage" src="" alt="放大预览">
+    </div>
+
+    <script>
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('preview');
+                    const img = new Image();
+                    img.src = e.target.result;
+                    
+                    img.onload = function() {
+                        // 调整预览区域大小
+                        const uploadArea = document.querySelector('.upload-area');
+                        const maxHeight = 800;
+                        const minHeight = 500;
+                        
+                        // 计算合适的预览区域高度
+                        let previewHeight = img.height;
+                        if (previewHeight > maxHeight) {
+                            previewHeight = maxHeight;
+                        } else if (previewHeight < minHeight) {
+                            previewHeight = minHeight;
+                        }
+                        
+                        uploadArea.style.height = `${previewHeight}px`;
+                        preview.innerHTML = `
+                            <div class="preview-container">
+                                <img src="${e.target.result}" alt="预览图">
+                            </div>`;
+                        updateSplitLines();
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function toggleDimensions() {
+            const splitType = document.getElementById('splitType').value;
+            const dimensions = document.getElementById('dimensionsControl');
+            const rows = document.getElementById('rows');
+            const cols = document.getElementById('cols');
+
+            if (splitType === 'pieces') {
+                dimensions.classList.add('show');
+            } else {
+                dimensions.classList.remove('show');
+                if (splitType === 'vertical') {
+                    rows.value = 1;
+                    cols.value = 2;
+                } else if (splitType === 'horizontal') {
+                    rows.value = 2;
+                    cols.value = 1;
+                }
+            }
+            
+            updateSplitLines();
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#2196F3';
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#e0e0e0';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#e0e0e0';
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                document.getElementById('imageUpload').files = files;
+                const event = new Event('change');
+                document.getElementById('imageUpload').dispatchEvent(event);
+            }
+        });
+
+        function getSplitPositions() {
+            const positions = {
+                vertical: [],
+                horizontal: []
+            };
+            
+            // 获取所有分割线
+            document.querySelectorAll('.split-line.vertical').forEach(line => {
+                const percent = parseFloat(line.style.left);
+                if (!isNaN(percent)) {
+                    positions.vertical.push(percent);
+                }
+            });
+            
+            document.querySelectorAll('.split-line.horizontal').forEach(line => {
+                const percent = parseFloat(line.style.top);
+                if (!isNaN(percent)) {
+                    positions.horizontal.push(percent);
+                }
+            });
+            
+            return positions;
+        }
+
+        function splitImage() {
+            const formData = new FormData();
+            const imageFile = document.getElementById('imageUpload').files[0];
+            
+            if (!imageFile) {
+                alert('请先选择要分割的图片！');
+                return;
+            }
+            
+            formData.append('image', imageFile);
+            
+            // 获取分割位置并添加到表单
+            const positions = getSplitPositions();
+            formData.append('split_positions', JSON.stringify(positions));
+            
+            // 显示加载状态
+            const splitButton = document.querySelector('.btn-split');
+            const originalText = splitButton.textContent;
+            splitButton.textContent = '处理中...';
+            splitButton.disabled = true;
+            
+            fetch('/split', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                const previewGrid = document.getElementById('previewGrid');
+                previewGrid.innerHTML = '';
+                
+                data.parts.forEach(partData => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'preview-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = partData;
+                    img.onclick = () => openModal(partData);
+                    
+                    previewItem.appendChild(img);
+                    previewGrid.appendChild(previewItem);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('分割过程出错，请重试！');
+            })
+            .finally(() => {
+                // 恢复按钮状态
+                splitButton.textContent = originalText;
+                splitButton.disabled = false;
+            });
+        }
+
+        function updateSplitLines() {
+            const preview = document.querySelector('.preview-container');
+            if (!preview) return;
+
+            const splitType = document.getElementById('splitType').value;
+            const splitLines = document.createElement('div');
+            splitLines.className = 'split-lines';
+            
+            const existingLines = preview.querySelector('.split-lines');
+            if (existingLines) {
+                existingLines.remove();
+            }
+
+            if (splitType === 'vertical') {
+                const line = createSplitLine('vertical', 0);
+                line.style.left = '50%';
+                splitLines.appendChild(line);
+            } else if (splitType === 'horizontal') {
+                const line = createSplitLine('horizontal', 0);
+                line.style.top = '50%';
+                splitLines.appendChild(line);
+            } else if (splitType === 'pieces') {
+                const rows = parseInt(document.getElementById('rows').value);
+                const cols = parseInt(document.getElementById('cols').value);
+                
+                for (let i = 1; i < cols; i++) {
+                    const line = createSplitLine('vertical', i);
+                    const percent = (i * 100 / cols);
+                    line.style.left = `${percent}%`;
+                    line.dataset.index = i;
+                    splitLines.appendChild(line);
+                }
+                
+                for (let i = 1; i < rows; i++) {
+                    const line = createSplitLine('horizontal', i);
+                    const percent = (i * 100 / rows);
+                    line.style.top = `${percent}%`;
+                    line.dataset.index = i;
+                    splitLines.appendChild(line);
+                }
+            }
+
+            preview.appendChild(splitLines);
+            initializeDraggableLines();
+        }
+
+        function createSplitLine(type, index) {
+            const line = document.createElement('div');
+            line.className = `split-line ${type}`;
+            line.dataset.index = index;
+            return line;
+        }
+
+        function initializeDraggableLines() {
+            const lines = document.querySelectorAll('.split-line');
+            const preview = document.querySelector('.preview-container');
+            
+            lines.forEach(line => {
+                let isDragging = false;
+                
+                line.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    e.preventDefault();
+                    line.style.opacity = '1';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+
+                    const rect = preview.getBoundingClientRect();
+                    const isVertical = line.classList.contains('vertical');
+                    
+                    if (isVertical) {
+                        const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                        const percent = (x / rect.width) * 100;
+                        line.style.left = `${percent}%`;
+                    } else {
+                        const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+                        const percent = (y / rect.height) * 100;
+                        line.style.top = `${percent}%`;
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        line.style.opacity = '0.8';
+                    }
+                });
+            });
+        }
+
+        document.getElementById('rows').addEventListener('change', updateSplitLines);
+        document.getElementById('cols').addEventListener('change', updateSplitLines);
+
+        function openModal(imgSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = 'flex';
+            modalImg.src = imgSrc;
+        }
+
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        async function downloadImages() {
+            const originalImage = document.querySelector('#preview img')?.src;
+            const previewImages = Array.from(document.querySelectorAll('.preview-grid img')).map(img => img.src);
+            
+            if (!originalImage || previewImages.length === 0) {
+                alert('请先分割图片！');
+                return;
+            }
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        original: originalImage,
+                        parts: previewImages
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'split_images.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('下载失败，请重试！');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('下载出错，请重试！');
+            }
+        }
+
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
